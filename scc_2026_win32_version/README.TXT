@@ -1,8 +1,8 @@
 *** Notes on compiling the Windows (Win32) Console version of the Small C Compiler ***
 
 Required systems:
-1) Windows 7 (8,10,11) Operating System OR
-2) TRDOS 386 or Linux operating system to generate SCC.EXE by using FASM compiler.
+1) Windows 7 (8,10,11) operating system OR
+2) TRDOS 386 or Linux operating system to generate SCC.EXE by using FASM assembler.
    (Because ASM outputs are in FASM syntax)
 
 Compile the following (TRDOS 386 & Windows compatible) C files
