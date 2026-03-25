@@ -1,1 +1,0 @@
-fasm scc2w.asm SMALLC.EXE
