@@ -1,1 +1,0 @@
-fasm example.asm example
