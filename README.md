@@ -1,4 +1,4 @@
-## SMALL C COMPILER (Origin: J.E. Hendrix) for TRDOS 386 Operating System
+## SMALL C COMPILER (Origin: J.E. Hendrix) for TRDOS 386 Operating System (+ Win32 Console)
 
 *** 32 bit C compiler, flat memory, FASM output  ***
 
