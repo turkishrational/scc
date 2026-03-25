@@ -1,1 +1,1 @@
-fasm scc.asm
+fasm scc.asm SCC.PRG

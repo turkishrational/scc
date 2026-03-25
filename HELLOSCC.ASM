@@ -2,7 +2,7 @@
 ; Small C Compiler for TRDOS 386 (v2.0.9 and later)
 ; Erdogan Tan - 2024
 ; Beginning: 05/09/2024
-; Last Update: 22/09/2024
+; Last Update: 21/03/2026
 ; -----------------------------------------------------------
 ; Derived from 'scc.asm' file of KolibriOS SCC source code
 ; 2024
@@ -52,5 +52,5 @@ START:
   db 0	
   db "Small C Compiler v1.0 for TRDOS 386"
   db 0
-  db "Erdogan Tan - 2024"
+  db "Erdogan Tan - 2026"
   db 0	

@@ -1,0 +1,1 @@
+rename scc.bin SCC.PRG
