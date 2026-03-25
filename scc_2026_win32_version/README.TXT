@@ -17,12 +17,15 @@ Using SCC.PRG on TRDOS 386 operating system or SCC.EXE on Windows operating syst
 > scc libstd.c
 > scc getarg.c (not required, original GETARG.ASM can be used)
 
+((Rename/Modify labels in asm files if required.))
+
 and then move SCC's ASM output files to a directory
 which includes
 
 FASM.EXE (Windows program)
 SCC.ASM (TRDOS 386 version) or SCCW.ASM (Windows 32 bit console version)
 INTRINS.ASM
+OSFUNC.ASM (or OSFUNCW.ASM for Windows version)
 (GETARG.ASM or GETARGW.ASM) files
 
 NOTE: It is better to use existing CC1.ASM (CC1W.ASM for Windows -uppercase file names-),
