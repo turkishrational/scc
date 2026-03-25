@@ -1,13 +1,12 @@
-***Notes on compiling the TRDOS 386 version of the Small C Compiler
-using the compiler itself (self-compilation)***
+*** Notes on compiling the Windows (Win32) Console version of the Small C Compiler ***
 
 Required systems:
-1) TRDOS 386 Floppy or Disk to run on real computer or emulator
-2) Windows or Linux operating system to generate SCC.PRG using FASM compiler.
+1) Windows 7 (8,10,11) Operating System OR
+2) TRDOS 386 or Linux operating system to generate SCC.EXE by using FASM compiler.
    (Because ASM outputs are in FASM syntax)
 
-Compile the following (TRDOS 386 compatible) C files
-Using SCC.PRG on TRDOS 386 operating system (floppy disk or disk):
+Compile the following (TRDOS 386 & Windows compatible) C files
+Using SCC.PRG on TRDOS 386 operating system or SCC.EXE on Windows operating system.
 
 ('cc.h', 'stdio.h' and 'notice.h' must be in the same directory)
 
@@ -21,19 +20,18 @@ Using SCC.PRG on TRDOS 386 operating system (floppy disk or disk):
 and then move SCC's ASM output files to a directory
 which includes
 
-FASM.EXE (windows program)
-SCC.ASM (TRDOS 386 version)
+FASM.EXE (Windows program)
+SCC.ASM (TRDOS 386 version) or SCCW.ASM (Windows 32 bit console version)
 INTRINS.ASM
-(GETARG.ASM) files
+(GETARG.ASM or GETARGW.ASM) files
 
-(precompiled files: CC1.ASM,CC2.ASM,CC3.ASM,CC4.ASM,LIBSTD.ASM)
+NOTE: It is better to use existing CC1.ASM (CC1W.ASM for Windows -uppercase file names-),
+      CC2.ASM, CC3.ASM, CC4.ASM, LIBSTD.ASM, GETARG.ASM (GETARGW.ASM for Windows)
+      files (semi-optimized ASM files) directly with FASM.
 
-Later...
+Then...
 
-to use
+use "FASM.EXE SCCW.ASM SCC.EXE" (or "FASM.PRG SCC.ASM SCC.PRG") 
+command (or use 'makescc.bat' or 'makesccw.bat') to make executable SCC file.
 
-> FASM SCC.ASM to create SCC.BIN
-
-and finally rename SCC.BIN to SCC.PRG.
-
-Erdogan Tan - 24/09/2024
+Erdogan Tan - 24/03/2026
