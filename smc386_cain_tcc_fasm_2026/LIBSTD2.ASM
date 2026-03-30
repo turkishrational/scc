@@ -739,6 +739,12 @@ _lib_77:			; {if(*ctl!='%')
 	JZ	short _lib_78	; else
 _lib_79:
 _lib_82: ; (!)
+	; 30/03/2026
+	LEA	EBX,[EBP+12]	; fd (file number)
+	MOV	EAX,[EBX]
+	PUSH	EAX
+	;MOV	CL,2
+
 	;LEA	EDX,[EBP-32]	; {OS_fputc(*ctl++,fd);
 	MOV	EBX,[EDX]
 	;INC	EBX
@@ -748,10 +754,6 @@ _lib_82: ; (!)
 	MOVSX	EAX,BYTE [EBX]
 	PUSH	EAX		; *ctl (character)
 
-	LEA	EBX,[EBP+12]	; fd (file number)
-	MOV	EAX,[EBX]
-	PUSH	EAX
-	;MOV	CL,2
 	CALL	_OS_fputc
 	ADD	ESP,8
 	LEA	EBX,[EBP-16]	; ++cc;
