@@ -21,8 +21,8 @@ _fputc	equ _OS_fputc
 _fgetc	equ _OS_fgetc
 _fclose equ _OS_fclos
 _putchar equ _OS_putc
-_getc	equ _OS_getc
-_putc	equ _OS_putc
+_getc	equ _OS_fgetc	; !
+_putc	equ _OS_fputc	; !
 
 	include "INTRINS.ASM"
 
