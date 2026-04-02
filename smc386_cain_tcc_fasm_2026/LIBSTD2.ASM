@@ -2,7 +2,7 @@
 ; Small C Compiler for TRDOS 386 (v2.0.9 and later)
 ; Erdogan Tan - 2024
 ; Beginning: 05/09/2024
-; Last Update: 30/03/2026
+; Last Update: 02/04/2026
 ; -----------------------------------------------------------
 ; Derived from 'libstd.asm' file of KolibriOS SCC source code
 ; 2024
@@ -437,202 +437,129 @@ _lib_46:
 
 ; Gets an entire string (including its newline terminator)
 
+	; /* TRDOS 386 v2 modification */
+	; 01/04/2026
 _fgets:				; fgets(str,size,fd)
 	PUSH	EBP
-	MOV	EBP,ESP		; return (_gets(str,size,fd,1));
+	MOV	EBP,ESP
 	LEA	EBX,[EBP+16]
-	MOV	EAX,[EBX]
-	PUSH	EAX		; str
-	LEA	EBX,[EBP+12]
-	MOV	EAX,[EBX]
-	PUSH	EAX		; size
+	MOV	EAX,[EBX]	; str
+	PUSH	EAX		; next = str
+	; esp = [ebp-4]
+_fgets_1:
 	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]
 	PUSH	EAX		; fd
-	MOV	EAX,1
-	;PUSH	EAX		; 1
-	;;MOV	CL,4
-	;CALL	__gets
-	;;ADD	ESP,16
-	;MOV	ESP,EBP
-	;POP	EBP
-	;RETN
-	JMP	short _gets_@
+	CALL	_OS_fgetc
+	;ADD	ESP,4
+	POP	EBX
+	MOV	EBX,[EBP-4]	; next ; str(pos)
+	; al = character
+	CMP	EAX,-1		; EOF
+	JE	short _fgets_2
+	MOV	[EBX],AL	; str[pos] = character
+	INC	EBX
+	CMP	AL,10	; \n	; new line (EOL) ; LF
+	JE	short _fgets_2
+	MOV	[EBP-4],EBX
+	LEA	EDX,[EBP+12]
+	MOV	ECX,[EDX]	; size
+	DEC	ECX
+	mov	[EDX],ECX
+	JG	short _fgets_1
+	; end of the string 
+_fgets_2:
+	MOV	BYTE [EBX],0	; str(pos)=0
+	;			; return (str);
+	LEA	EBX,[EBP+16]
+	MOV	EAX,[EBX]
+	MOV	ESP,EBP
+	POP	EBP
+	RETN
 
 ; Gets an entire string from stdin
 ;	(excluding its newline terminator)
 
 	; /* TRDOS 386 v2 modification */
+	; 01/04/2026
 _gets:				; gets(str)
 	PUSH	EBP		; char *str;
 	MOV	EBP,ESP
-	LEA	EBX,[EBP+8]	; return (_gets(str,32767,stdin,0))
-	MOV	EAX,[EBX]
-	PUSH	EAX		; str
-	MOV	EAX,32767
-	PUSH	EAX		; size
-	MOV	EAX,-1 ; STDIN	; stdin is -1 for TRDOS 386
-	PUSH	EAX		; -1
-	XOR	EAX,EAX
-_gets_@:
-	PUSH	EAX		; 0
-	;MOV	CL,4
-	CALL	__gets
-	;ADD	ESP,16
-	MOV	ESP,EBP
-	POP	EBP
-	RETN
-
-	; /* TRDOS 386 v2 modification */
-__gets:
-	PUSH	EBP		; _gets(str,size,fd,nl)
-	MOV	EBP,ESP	; char *str; unsigned size,fd,nl;
-	ADD	ESP,-8		; int backup; char *next;
 	XOR	EAX,EAX ; 0
-	PUSH	EAX		; int previous;
-	LEA	EBX,[EBP+20]
-	MOV	EAX,[EBX]	; str
-	LEA	EBX,[EBP-8]	; next
-	MOV	[EBX],EAX	; next=str;
+	PUSH	EAX		; int position;
+	; esp = [ebp-4]
 _gets_1:
-_gets_2:
-_gets_3:			; while(--size>0)
-	LEA	EBX,[EBP+16]
-	MOV	EAX,[EBX]
-	DEC	EAX
-	MOV	[EBX],EAX	; --size
-	LEA	EDX,[EBP-8] ;*	; next
-	MOV	EBX,[EDX] ;*
-	OR	EAX,EAX
-	;JNZ	short _gets_5
-	;JMP	short _gets_4
-	JZ	short _gets_4
-;_gets_4:
-	;LEA	EDX,[EBP-8]	; *next = NULL;
-	;MOV	EBX,[EDX]
-	;XOR	EAX,EAX
-	;MOV	[EBX],AL
-	;LEA	EBX,[EBP+20]
-	;MOV	EAX,[EBX]
-	;MOV	ESP,EBP
-	;POP	EBP
-	;RETN
-	;JMP	short _gets_9
-_gets_5:			; {switch (*next=OS_fgetc(fd))
-	;LEA	EDX,[EBP-8]
-	;MOV	EBX,[EDX]
-	PUSH	EBX
-	LEA	EBX,[EBP+12]
-	MOV	EAX,[EBX]
-	PUSH	EAX		; fd
-	;MOV	CL,1
-	CALL	_OS_fgetc
-	ADD	ESP,4
-	POP	EBX
-	MOV	[EBX],AL	; *next=OS_fgetc(fd)
-	JMP	_gets_19
-_gets_6:			; case EOF:
-	LEA	EDX,[EBP-8]	; *next=NULL;
-	MOV	EBX,[EDX]
-	;XOR	EAX,EAX
-	;MOV	[EBX],AL
-	MOV	BYTE [EBX],0
-	;LEA	EDX,[EBP-8]	; if(next==str)
-	;MOV	EBX,[EDX]
-	LEA	ECX,[EBP+20]
-	MOV	EAX,[ECX]
-	CALL	__eq
-	OR	EAX,EAX
-	JZ	short _gets_10
-_gets_7:
-	XOR	EAX,EAX	; 0	; NULL
-	MOV	ESP,EBP
-	POP	EBP
-	RETN
-_gets_21:
-	; case '\r':
-	LEA	EBX,[EBP-12]	; previous
-	MOV	BYTE [EBX],13
-	JMP	short _gets_18
-_gets_8:			; case '\n':
-	LEA	EDX,[EBP-8]	; *(next+nl)=NULL;
-	MOV	EBX,[EDX]
+	CALL	_OS_getc
+	; eax (al) = character
+	MOV	EDX,[EBP-4]	; pos (offset)
 	LEA	ECX,[EBP+8]
-	MOV	EAX,[ECX]
-	ADD	EBX,EAX
-	;ADD	EBX,[ECX]
-	LEA	EDX,[EBP-12]
-	CMP	BYTE [EDX],0	; previous
-	JNA	short _gets_4
-	OR	EAX,EAX		; nl
-	JNZ	short _gets_4
-	DEC	EBX
-_gets_4:
-_gets_9:
-	;XOR	EAX,EAX	; 0	; NULL
-	;MOV	[EBX],EAX	; *next = 0
-	MOV	BYTE [EBX],0
-_gets_10:			; return (str);
-	LEA	EBX,[EBP+20]
+	MOV	EBX,[ECX]	; str[0] address
+	ADD	EBX,EDX		; +pos
+	; ebx = str[pos]
+	CMP	AL,13	; CR
+	;JE	short _gets_5	; new line (CRLF)
+	JE	short _gets_6	; 02/04/2026
+	JA	short _gets_4
+	;
+	CMP	AL,8	; backspace
+	JNE	short _gets_3
+	MOV	BYTE [EBX],20h
+	OR	EDX,EDX
+	JZ	short _gets_2	; pos = 0
+	DEC	EDX		; pos = pos-1 ; backspace
+	MOV	[EBP-4],DX
+	MOV	AL,8	; \b
+	PUSH	EAX
+	CALL	_OS_putc	; echo to stdout
+	POP	EAX
+_gets_2:
+	MOV	AL,20h	; space
+	PUSH	EAX
+	CALL	_OS_putc	; echo to stdout
+	POP	EAX
+	MOV	AL,8	; \b
+	PUSH	EAX
+	CALL	_OS_putc	; echo to stdout
+	POP	EAX
+	JMP	short _gets_1
+_gets_3:
+	CMP	AL,10	; LF
+	JNE	short _gets_1	; skip
+	;JMP	short _gets_5	; new line (CRLF)
+_gets_5:
+	MOV	AL,13  ; CR
+_gets_6:
+	; ebx = str [pos]
+	MOV	BYTE [EBX],0	; str(pos)=0
+	;
+	;MOV	AL,13  ; CR
+	PUSH	EAX
+	CALL	_OS_putc
+	POP	EAX
+	MOV	AL,10  ; LF
+	PUSH	EAX
+	CALL	_OS_putc
+	;POP	EAX
+	;			; return (str);
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]
 	MOV	ESP,EBP
 	POP	EBP
 	RETN
-_gets_11:			; case RUB: // \b
-	LEA	EDX,[EBP-8]	; if(next>str)
-	MOV	EBX,[EDX]
-	LEA	ECX,[EBP+20]
-	MOV	EAX,[ECX]
-	CALL	__ugt
-	LEA	EBX,[EBP-4] ; *
-	OR	EAX,EAX
-	JZ	short _gets_13	; backup=0;
-_gets_12:
-	;LEA	EBX,[EBP-4] ; *	; backup=1;
-	;MOV	EAX,1
-	;MOV	[EBX],EAX ; **
-	JMP	short _gets_15
-_gets_13:
-	;LEA	EBX,[EBP-4] ; *
-	;XOR	EAX,EAX
-	;MOV	[EBX],EAX ; **
-	JMP	short _gets_16
-_gets_14:			; case WIPE:
-	LEA	EDX,[EBP-8]
-	MOV	EAX,[EDX]	; next
-	LEA	ECX,[EBP+20]
-	MOV	EBX,[ECX]	; str
-	SUB	EAX,EBX
-	LEA	EBX,[EBP-4]	; backup=next-str;
-	;MOV	[EBX],EAX
-_gets_15:
-_gets_16:
-	MOV	[EBX],EAX ; **
-_gets_17:
-_gets_18:
-	LEA	EBX,[EBP-8]	; ++next;
-	MOV	EAX,[EBX]
-	INC	EAX
-	MOV	[EBX],EAX
-	JMP	_gets_2	; while
-
-_gets_19:	; {switch (*next=OS_fgetc(fd))
-	CALL	__switch
-
- DD _gets_6	; case EOF:
- DD -1
- DD _gets_8	; case '\n':	; LF
- DD 10
- DD _gets_21	; case '\r':	; CR
- DD 13
- DD _gets_11	; case RUB:
- DD 8
- DD _gets_14	; case WIPE:
- DD 24
- DD 0		; default:
-	JMP	short _gets_18
-
-_gets_20: DB 8,32,8,0		; "\b \b"
+_gets_4:
+	CMP	AL,32	; SPACE
+	JB	short _gets_1	; skip this character
+	CMP	EDX,256		; maximum value (limit)
+	JNB	short _gets_5
+	INC	EDX		; pos = pos+1
+	MOV	[EBP-4],EDX	; position (+,0)
+	; ebx = str[pos]	
+	; al = character
+	MOV	[EBX],AL	; str[pos] = character
+	PUSH	EAX
+	CALL	_OS_putc	; echo to stdout
+	POP	EAX
+	JMP	short _gets_1
 
 ; /* fprintf(fd, ctlstring, arg, arg, ...)
 ; Formatted print. */

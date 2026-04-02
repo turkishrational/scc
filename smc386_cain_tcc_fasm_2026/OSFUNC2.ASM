@@ -2,7 +2,7 @@
 ; Small C Compiler for TRDOS 386 (v2.0.9 and later)
 ; Erdogan Tan - 2024
 ; Beginning: 05/09/2024
-; Last Update: 30/03/2026
+; Last Update: 31/03/2026
 ; -----------------------------------------------------------
 ; Derived from 'osfunc.asm' file of KolibriOS SCC source code
 ; 2024
@@ -159,6 +159,9 @@ _OS_fgetc:
 	jz	short _OS_getc ; 16/09/2024
 
 	dec	eax ; 1 based
+	; 31/03/2026
+	jz	short _OS_getc
+	
 	dec	eax ; 0 based file handle
 
 	mov	byte [character],0
@@ -197,6 +200,9 @@ _OS_fputc:	; 30/03/2026
 	jz	short _OS_putc_@ ; 16/09/2024
 
 	dec	eax ; 1 based
+	; 31/03/2026
+	jz	short _OS_putc_@
+
 	dec	eax ; 0 based file handle
 
 	sys	_write, eax, character, 1
