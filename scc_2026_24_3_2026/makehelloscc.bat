@@ -1,1 +1,0 @@
-fasm helloscc.asm HELLOSCC.PRG -s helloscc.fas

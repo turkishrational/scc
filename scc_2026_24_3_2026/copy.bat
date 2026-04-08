@@ -1,1 +1,0 @@
-copy scc.bin SCC.PRG

@@ -1,1 +1,0 @@
-fasm READFILEW32.ASM
