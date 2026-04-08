@@ -1,0 +1,1 @@
+fasm hellosccw.asm HELLOSDCC.EXE
