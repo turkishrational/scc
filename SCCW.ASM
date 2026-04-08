@@ -3,7 +3,7 @@
 ; Small C Compiler for TRDOS 386 (v2.0.9 and later)
 ; Erdogan Tan - 2024
 ; Beginning: 05/09/2024
-; Last Update: 24/03/2026
+; Last Update: 07/04/2026
 ; -----------------------------------------------------------
 ; Derived from 'scc.asm' file of KolibriOS SCC source code
 ; 2024

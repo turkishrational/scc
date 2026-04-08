@@ -23,29 +23,13 @@
 _puts:
 	PUSH	EBP
 	MOV	EBP,ESP
-	; 04/04/2026 (CRLF)
-	XOR	EAX,EAX		; char *c;
-	PUSH	EAX 		; c=NULL;
-_puts_1:	; while
+_puts_1:
 	LEA	EBX,[EBP+8]	; (*string)
 	MOV	EDX,[EBX] 	; string's itself
-	;MOVSX	EAX,BYTE [EDX]	; char in string
-	MOV	AL,[EDX]
+	MOVSX	EAX,BYTE [EDX]	; char in string
 	OR	EAX,EAX
 	JZ	short _puts_2
 	INC	DWORD [EBX]	; (*string++);
-	LEA	EDX,[EBP-4]
-	CMP	BYTE [EDX],13	; CR ?
-	JE	short _puts_3	; yes, skip CRLF
-	MOV	[EDX],AL	; set is as previous
-	CMP	AL,10		; LF ?
-	JNE	short _puts_3	; no
-	MOV	AL,13		; yes, put CR before LF
-	PUSH	EAX
-	CALL	_OS_putc
-	POP	EAX
-	MOV	AL,10		
-_puts_3:
 	PUSH	EAX
 	;MOV	CL,1 ; 1 argument
 	CALL	_OS_putc
@@ -53,7 +37,6 @@ _puts_3:
 	POP	EAX
 	JMP	short _puts_1
 _puts_2:
-	MOV	ESP,EBP	; 04/04/2026
 	POP	EBP
 	RETN
 
@@ -88,6 +71,7 @@ _puts_2:
 ;	CALL	_OS_getc
 ;	;POP	EBP
 ;	;RETN
+
 ; reverse string in place
 
 _reverse:			; reverse(s) char *s;
@@ -153,23 +137,23 @@ _strcpy:			; strcpy(s,t) char *s,*t;
 	PUSH	EBP
 	MOV	EBP,ESP
 	ADD	ESP,-4		; char *d;
-	LEA	EBX,[EBP+12]
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]	; char *s
 	LEA	EDX,[EBP-4]
 	MOV	[EDX],EAX	; d=s;
 _strcpy_1:			; while(*s++ =*t++);
-	;LEA	EBX,[EBP+12] 	; *s
+	;LEA	EBX,[EBP+8] 	; *s
 	MOV	ECX,[EBX]
 	;INC	ECX
 	;MOV	[EBX],ECX
 	;DEC	ECX
 	INC	DWORD [EBX] 	; *s++
-	LEA	EAX,[EBP+8] 	; *t
+	LEA	EAX,[EBP+12] 	; *t
 	MOV	EDX,[EAX]
 	INC	DWORD [EAX] 	; *t++
 	MOVSX	EAX,BYTE [EDX]
 	MOV	[ECX],AL	; *s++ =*t++
-	; ebx = [EBP+12]
+	; ebx = [EBP+8]
 	OR	EAX,EAX
 	JNZ	short _strcpy_1
 	LEA	EBX,[EBP-4] 	; pointer to d
@@ -359,7 +343,7 @@ _atoib:				; atoib(s,b)
 	XOR	EAX,EAX
 	MOV	[EBX],EAX
 _lib_34:
-	LEA	EAX,[EBP+12]	; while(isspace(*s)) ++s;
+	LEA	EAX,[EBP+8]	; while(isspace(*s)) ++s;
 	MOV	EBX,[EAX]
 	MOVSX	EAX, BYTE [EBX]
 	PUSH	EAX
@@ -369,13 +353,13 @@ _lib_34:
 	OR	EAX,EAX
 	JZ	short _lib_35
 _lib_36:
-	LEA	EBX,[EBP+12]	; ++s;
+	LEA	EBX,[EBP+8]	; ++s;
 	INC	DWORD [EBX]
 	JMP	short _lib_34
 _lib_35:
 _lib_37:
 	LEA	EDX,[EBP-8]	; while((digit=(127 & *s++))>='0')
-	LEA	EBX,[EBP+12]
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]
 	INC	DWORD [EBX]
 	MOVSX	EBX,BYTE [EAX]
@@ -428,7 +412,7 @@ _lib_42:
 	;LEA	EDX,[EBP-8]	; if(digit>=b) break;
 	;MOV	EAX,[EDX]
 	PUSH	EAX		; digit
-	LEA	EBX,[EBP+8]
+	LEA	EBX,[EBP+12]
 	MOV	EAX,[EBX]	; b
 	POP	EBX
 	CALL	__ge
@@ -436,7 +420,7 @@ _lib_42:
 	JNE	short _lib_47
 _lib_46:
 	LEA	EDX,[EBP-4]	; n=b*n+digit;
-	LEA	EBX,[EBP+8]
+	LEA	EBX,[EBP+12]
 	MOV	ECX,[EBX]	; b
 	;LEA	EDX,[EBP-4]
 	MOV	EAX,[EDX]	; n
@@ -450,266 +434,158 @@ _lib_46:
 
 ; Gets an entire string (including its newline terminator)
 
+	; /* TRDOS 386 v2 modification */
+	; 01/04/2026
 _fgets:				; fgets(str,size,fd)
 	PUSH	EBP
-	MOV	EBP,ESP		; return (_gets(str,size,fd,1));
+	MOV	EBP,ESP
+	LEA	EBX,[EBP+8]
+	MOV	EAX,[EBX]	; str
+	PUSH	EAX		; next = str
+	; esp = [ebp-4]
+_fgets_1:
 	LEA	EBX,[EBP+16]
 	MOV	EAX,[EBX]
-	PUSH	EAX		; str
-	LEA	EBX,[EBP+12]
-	MOV	EAX,[EBX]
-	PUSH	EAX		; size
+	PUSH	EAX		; fd
+	CALL	_OS_fgetc
+	;ADD	ESP,4
+	POP	EBX
+	MOV	EBX,[EBP-4]	; next ; str(pos)
+	; al = character
+	CMP	EAX,-1		; EOF
+	JE	short _fgets_2
+	MOV	[EBX],AL	; str[pos] = character
+	INC	EBX
+	CMP	AL,10	; \n	; new line (EOL) ; LF
+	JE	short _fgets_2
+	MOV	[EBP-4],EBX
+	LEA	EDX,[EBP+12]
+	MOV	ECX,[EDX]	; size
+	DEC	ECX
+	mov	[EDX],ECX
+	JG	short _fgets_1
+	; end of the string 
+_fgets_2:
+	MOV	BYTE [EBX],0	; str(pos)=0
+	;			; return (str);
 	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]
-	PUSH	EAX		; fd
-	MOV	EAX,1
-	;PUSH	EAX		; 1
-	;;MOV	CL,4
-	;CALL	__gets
-	;;ADD	ESP,16
-	;MOV	ESP,EBP
-	;POP	EBP
-	;RETN
-	JMP	short _gets_@
+	MOV	ESP,EBP
+	POP	EBP
+	RETN
 
 ; Gets an entire string from stdin
 ;	(excluding its newline terminator)
 
 	; /* TRDOS 386 v2 modification */
+	; 01/04/2026
 _gets:				; gets(str)
 	PUSH	EBP		; char *str;
 	MOV	EBP,ESP
-	LEA	EBX,[EBP+8]	; return (_gets(str,32767,stdin,0))
-	MOV	EAX,[EBX]
-	PUSH	EAX		; str
-	MOV	EAX,32767
-	PUSH	EAX		; size
-	MOV	EAX,-1 ; STDIN	; stdin is -1 for TRDOS 386
-	PUSH	EAX		; -1
-	XOR	EAX,EAX
-_gets_@:
-	PUSH	EAX		; 0
-	;MOV	CL,4
-	CALL	__gets
-	;ADD	ESP,16
-	MOV	ESP,EBP
-	POP	EBP
-	RETN
-
-	; /* TRDOS 386 v2 modification */
-__gets:
-	PUSH	EBP		; _gets(str,size,fd,nl)
-	MOV	EBP,ESP	; char *str; unsigned size,fd,nl;
-	ADD	ESP,-8		; int backup; char *next;
-	LEA	EBX,[EBP+20]
-	MOV	EAX,[EBX]	; str
-	LEA	EBX,[EBP-8]	; next
-	MOV	[EBX],EAX	; next=str;
+	XOR	EAX,EAX ; 0
+	PUSH	EAX		; int position;
+	; esp = [ebp-4]
 _gets_1:
-_gets_2:
-_gets_3:			; while(--size>0)
-	LEA	EBX,[EBP+16]
-	MOV	EAX,[EBX]
-	DEC	EAX
-	MOV	[EBX],EAX	; --size
-	LEA	EDX,[EBP-8] ;*	; next
-	MOV	EBX,[EDX] ;*
-	OR	EAX,EAX
-	;JNZ	short _gets_5
-	;JMP	short _gets_4
-	JZ	short _gets_4
-;_gets_4:
-	;LEA	EDX,[EBP-8]	; *next = NULL;
-	;MOV	EBX,[EDX]
-	;XOR	EAX,EAX
-	;MOV	[EBX],AL
-	;LEA	EBX,[EBP+20]
-	;MOV	EAX,[EBX]
-	;MOV	ESP,EBP
-	;POP	EBP
-	;RETN
-	;JMP	short _gets_9
-_gets_5:			; {switch (*next=OS_fgetc(fd))
-	;LEA	EDX,[EBP-8]
-	;MOV	EBX,[EDX]
-	PUSH	EBX
-	LEA	EBX,[EBP+12]
-	MOV	EAX,[EBX]
-	PUSH	EAX		; fd
-	;MOV	CL,1
-	CALL	_OS_fgetc
-	ADD	ESP,4
-	POP	EBX
-	MOV	[EBX],AL	; *next=OS_fgetc(fd)
-	JMP	short _gets_19
-_gets_6:			; case EOF:
-	LEA	EDX,[EBP-8]	; *next=NULL;
-	MOV	EBX,[EDX]
-	;XOR	EAX,EAX
-	;MOV	[EBX],AL
-	MOV	BYTE [EBX],0
-	;LEA	EDX,[EBP-8]	; if(next==str)
-	;MOV	EBX,[EDX]
-	LEA	ECX,[EBP+20]
-	MOV	EAX,[ECX]
-	CALL	__eq
-	OR	EAX,EAX
-	JZ	short _gets_10
-_gets_7:
-	XOR	EAX,EAX	; 0	; NULL
-	MOV	ESP,EBP
-	POP	EBP
-	RETN
-		; 04/04/2026 - TRDOS 386 Modification
-_gets_21:			; case '\r': ; CR
-	LEA	EDX,[EBP+8]
-	MOV	EAX,[EDX]	; if (nl==NULL) nl=-1;
-	OR	EAX,EAX
-	JNZ	short _gets_22
-	;MOV	[EDX],-1	; (1 byte backward more)
-	DEC	DWORD [EDX]
-	JMP	short _gets_22	; ((put 0 instead of CR))
-;_gets_22:
-	;LEA	EBX,[EBP-8]
-	;INC	DWORD [EBX]	; ++next;
-	;JMP	short _gets_3	; continue;
-	
-_gets_8:			; case '\n': ; LF	
-	LEA	EDX,[EBP-8]	; *(next+nl)=NULL;
-	MOV	EBX,[EDX]
+	CALL	_OS_getc
+	; eax (al) = character
+	MOV	EDX,[EBP-4]	; pos (offset)
 	LEA	ECX,[EBP+8]
-	;MOV	EAX,[ECX]
-	;ADD	EBX,EAX
-	ADD	EBX,[ECX]
-_gets_4:
-_gets_9:
-	;XOR	EAX,EAX	; 0	; NULL
-	;MOV	[EBX],EAX	; *next = 0
-	MOV	BYTE [EBX],0
-_gets_10:			; return (str);
-	LEA	EBX,[EBP+20]
+	MOV	EBX,[ECX]	; str[0] address
+	ADD	EBX,EDX		; +pos
+	; ebx = str[pos]
+	CMP	AL,13	; CR
+	;JE	short _gets_5	; new line (CRLF)
+	JE	short _gets_6	; 02/04/2026
+	JA	short _gets_4
+	;
+	CMP	AL,8	; backspace
+	JNE	short _gets_3
+	MOV	BYTE [EBX],20h
+	OR	EDX,EDX
+	JZ	short _gets_2	; pos = 0
+	DEC	EDX		; pos = pos-1 ; backspace
+	MOV	[EBP-4],EDX
+	MOV	AL,8	; \b
+	PUSH	EAX
+	CALL	_OS_putc	; echo to stdout
+	POP	EAX
+_gets_2:
+	MOV	AL,20h	; space
+	PUSH	EAX
+	CALL	_OS_putc	; echo to stdout
+	POP	EAX
+	MOV	AL,8	; \b
+	PUSH	EAX
+	CALL	_OS_putc	; echo to stdout
+	POP	EAX
+	JMP	short _gets_1
+_gets_3:
+	CMP	AL,10	; LF
+	JNE	short _gets_1	; skip
+	;JMP	short _gets_5	; new line (CRLF)
+_gets_5:
+	MOV	AL,13  ; CR
+_gets_6:
+	; ebx = str [pos]
+	MOV	BYTE [EBX],0	; str(pos)=0
+	;
+	;MOV	AL,13  ; CR
+	PUSH	EAX
+	CALL	_OS_putc
+	POP	EAX
+	MOV	AL,10  ; LF
+	PUSH	EAX
+	CALL	_OS_putc
+	;POP	EAX
+	;			; return (str);
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]
 	MOV	ESP,EBP
 	POP	EBP
 	RETN
-_gets_11:			; case RUB: // \b
-	LEA	EDX,[EBP-8]	; if(next>str)
-	MOV	EBX,[EDX]
-	LEA	ECX,[EBP+20]
-	MOV	EAX,[ECX]
-	CALL	__ugt
-	LEA	EBX,[EBP-4] ; *
-	OR	EAX,EAX
-	JZ	short _gets_13	; backup=0;
-_gets_12:
-	;LEA	EBX,[EBP-4] ; *	; backup=1;
-	;MOV	EAX,1
-	;MOV	[EBX],EAX ; **
-	JMP	short _gets_15
-_gets_13:
-	;LEA	EBX,[EBP-4] ; *
-	;XOR	EAX,EAX
-	;MOV	[EBX],EAX ; **
-	JMP	short _gets_16
-_gets_14:			; case WIPE:
-	LEA	EDX,[EBP-8]
-	MOV	EAX,[EDX]	; next
-	LEA	ECX,[EBP+20]
-	MOV	EBX,[ECX]	; str
-	SUB	EAX,EBX
-	LEA	EBX,[EBP-4]	; backup=next-str;
-	;MOV	[EBX],EAX
-_gets_15:
-_gets_16:
-	MOV	[EBX],EAX ; **
-_gets_17:
-_gets_18:
-_gets_22:
-	LEA	EBX,[EBP-8]	; ++next;
-	;MOV	EAX,[EBX]
-	;INC	EAX
-	;MOV	[EBX],EAX
-	INC	DWORD [EBX]	; 04/04/2026
-	JMP	_gets_2	; while
-
-_gets_19:	; {switch (*next=OS_fgetc(fd))
-	CALL	__switch
-
- DD _gets_6	; case EOF:
- DD -1
- DD _gets_21	; case '\r':	; 04/04/2026
- DD 13
- DD _gets_8	; case '\n':
- DD 10
- DD _gets_11	; case RUB:
- DD 8
- DD _gets_14	; case WIPE:
- DD 24
- DD 0		; default:
-	JMP	short _gets_18
-
-;_gets_20: DB 8,32,8,0		; "\b \b"
+_gets_4:
+	CMP	AL,32	; SPACE
+	JB	short _gets_1	; skip this character
+	CMP	EDX,256		; maximum value (limit)
+	JNB	short _gets_5
+	INC	EDX		; pos = pos+1
+	MOV	[EBP-4],EDX	; position (+,0)
+	; ebx = str[pos]
+	; al = character
+	MOV	[EBX],AL	; str[pos] = character
+	PUSH	EAX
+	CALL	_OS_putc	; echo to stdout
+	POP	EAX
+	JMP	short _gets_1
 
 ; /* fprintf(fd, ctlstring, arg, arg, ...)
 ; Formatted print. */
 ; (b, c, d, o, s, u, and x specifications are supported.) */
 
-_fprintf:			; fprintf(argc) int argc;
+	; /* TRDOS 386 v2 modification */
+	; 03/04/2026
+_fprintf:
+	MOV	EAX,[ESP+8] ; fd  ; 04/04/2026
 	PUSH	EBP
 	MOV	EBP,ESP
-	ADD	ESP,-4		; int *nxtarg;
-
-	CALL	_CCARGC		; mov eax,cl ; library
-	; eax = number of fprintf arguments
-	LEA	EBX,[EBP+8]	; &argc
-	DEC	EAX ; *		; (sub eax,1)
-	SHL	EAX,1
-	SHL	EAX,1
-	ADD	EAX,EBX
-	LEA	EBX,[EBP-4]	; nxtarg
-	;MOV	[EBX],EAX	; = CCARGC()+&argc;
-				; return(_print(*(--nxtarg),--nxtarg));
-	;LEA	EBX,[EBP-4]
-	;MOV	EAX,[EBX]
-	;SUB	EAX,4 *
-	MOV	[EBX],EAX	; fd address
-	MOV	ECX,[EAX]
-	PUSH	ECX		; file number
-	;LEA	EBX,[EBP-4]
-	;MOV	EAX,[EBX]
-	SUB	EAX,4
-	MOV	[EBX],EAX
-	;PUSH	EAX
-	;;MOV	CL,2
-	;CALL	__print
-	;;ADD	ESP,8
-	;MOV	ESP,EBP
-	;POP	EBP
-	;RETN
-	JMP	short _print_f_@
+	PUSH	EAX	; repositioning fd for '__print'
+	CALL	__print
+	MOV	ESP,EBP
+	POP	EBP
+	RETN
 
 ; /* printf(ctlstring, arg, arg, ...) - Formatted print.
 ; (b, c, d, o, s, u, and x specifications are supported.)
 ; Note: b (binary) is a non-standard extension. */
 
+	; /* TRDOS 386 v2 modification */
+	; 03/04/2026
 _printf:
 	PUSH	EBP
 	MOV	EBP,ESP
 	MOV	EAX,-1	; TRDOS 386 STDOUT/STDERR
 	PUSH	EAX		; (file number)
-	CALL	_CCARGC		; mov eax,cl ; library
-	; eax = number of printf arguments
-	LEA	EBX,[EBP+8]	; &argc
-	DEC	EAX ; *		; (sub eax,1)
-	SHL	EAX,1
-	SHL	EAX,1
-	ADD	EAX,EBX		; CCARGC()+&argc-1
-	;SUB	EAX,4 ; *
-_print_f_@:
-	PUSH	EAX
-	;MOV	CL,2
 	CALL	__print
-	;ADD	ESP,8
 	MOV	ESP,EBP
 	POP	EBP
 	RETN
@@ -717,8 +593,10 @@ _print_f_@:
 ; /* _print(fd, ctlstring, arg, arg, ...)
 ; ** Called by fprintf() and printf(). */
 
-__print:			; _print(fd,nxtarg)
-	PUSH	EBP		; int fd,*nxtarg;
+	; /* TRDOS 386 v2 modification */
+	; 03/04/2026
+__print:
+	PUSH	EBP
 	MOV	EBP,ESP
 		; int arg,left,pad,cc,len,maxchr,width;
 	ADD	ESP,-56		; char *ctl,*sptr,str[17];
@@ -728,39 +606,38 @@ __print:			; _print(fd,nxtarg)
 	; 07/04/2026
 	PUSH	EAX		; c=0;
 	;
-	LEA	EBX,[EBP-32]	; ctl=*nxtarg--;
-	LEA	EDX,[EBP+8]
+	LEA	EDX,[EBP+20]	; 04/04/2026
+	LEA	EBX,[EBP-4]	; arg = ebp+20
+	MOV	[EBX],EDX
+	LEA	EBX,[EBP-32]	; ctl = ctlstring
 	MOV	EAX,[EDX]
-	MOV	ECX,[EAX]
-	MOV	[EBX],ECX
-	SUB	EAX,4
-	MOV	[EDX],EAX
-_p_1:				; while(*ctl)
+	MOV	[EBX],EAX
+__p_1:				; while(*ctl)
 	LEA	EDX,[EBP-32]
 	MOV	EAX,[EDX]
 	MOVSX	EBX,BYTE [EAX]
 	OR	EBX,EBX
-	JNZ	short _p_3
-_p_2:			; return (cc);
+	JNZ	short __p_3
+__p_2:				; return (cc);
 	LEA	EBX,[EBP-16]
 	MOV	EAX,[EBX]
 	MOV	ESP,EBP
 	POP	EBP
 	RETN
-_p_3:				; {if(*ctl!='%')
+__p_3:				; {if(*ctl!='%')
 	;LEA	EDX,[EBP-32]
 	;MOV	EAX,[EDX]
 	;MOVSX	EBX,BYTE [EAX]
 	MOV	EAX,37	; '%'
 	CALL	__ne
 	OR	EAX,EAX
-	JZ	short _p_5	; else
-_p_4: ; (!)
+	JZ	short __p_5	; else
+__p_4:
 	; 07/04/2026 (CRLF)
 	LEA	EBX,[EBP-60]
 	MOV	AL,[EBX]
 	CMP	AL,13		; if(c!='\r') {
-	JE	short _p_34
+	JE	short __p_34
 
 	;LEA	EDX,[EBP-32]
 	MOV	ECX,[EDX]
@@ -768,105 +645,53 @@ _p_4: ; (!)
 	MOV	[EBX],EAX
 				; if(c=='\n')
 	CMP	AL,10	; LF	; '\n'
-	JNE	short _p_34
-	
-	MOV	AL,13	; CR	; put CR before LF
-	PUSH	EAX
-	LEA	EBX,[EBP+12]
+	JNE	short __p_34
+
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]
 	PUSH	EAX		; fd
+	MOV	AL,13	; CR	; put CR before LF
+	PUSH	EAX
 	;MOV	CL,2
 	CALL	_OS_fputc	; OS_fputc('\r',fd);
 	ADD	ESP,8
 	LEA	EDX,[EBP-32]
 	;MOV	AL,10		; CRLF
-_p_34:
-	;LEA	EDX,[EBP-32]	; {OS_fputc(*ctl++,fd);
+__p_34:
+	LEA	EBX,[EBP+8]	; fd (file number)
+	MOV	EAX,[EBX]
+	PUSH	EAX
 	MOV	EBX,[EDX]
-	;INC	EBX
-	;MOV	[EDX],EBX
-	;DEC	EBX
 	INC	DWORD [EDX]
 	MOVSX	EAX,BYTE [EBX]
 	PUSH	EAX		; *ctl (character)
-
-	LEA	EBX,[EBP+12]	; fd (file number)
-	MOV	EAX,[EBX]
-	PUSH	EAX
-	;MOV	CL,2
-	CALL	_OS_fputc
+	CALL	_OS_fputc	; {OS_fputc(*ctl++,fd);
 	ADD	ESP,8
 	LEA	EBX,[EBP-16]	; ++cc;
-	;MOV	EAX,[EBX]
-	;INC	EAX
-	;MOV	[EBX],EAX
 	INC	DWORD [EBX]
-	JMP	short _p_1	; continue;
-_p_5:
-	;LEA	EDX,[EBP-32]	; else ++ctl;
-	;MOV	EAX,[EDX]
-	;INC	EAX
-	;MOV	[EDX],EAX
+	JMP	short __p_1	; continue;
+__p_5: ; *ctl=='%'		; else ++ctl;
 	INC	DWORD [EDX]	; (next char)
 	;
-	;LEA	EDX,[EBP-32]	; if(*ctl=='%')
-	MOV	EAX,[EDX]
+	MOV	EAX,[EDX]	; if(*ctl=='%')
 	MOVSX	EBX,BYTE [EAX]  ; (*)
 	MOV	EAX,37	; '%'
 	CALL	__eq
 	OR	EAX,EAX
-	;JZ	short _lib_81
-	JNZ	short _p_4 ; (!)
-;_p_4:			; %%
-	;;LEA	EDX,[EBP-32]	; {OS_fputc(*ctl++,fd);
-	;;MOV	EBX,[EDX]
-	;;INC	EBX
-	;;MOV	[EDX],EBX
-	;;DEC	EBX
-	;INC	DWORD [EDX]
-	;;MOVSX	EAX,BYTE [EBX]
-	;;PUSH	EAX ; (*)
-	;PUSH	EBX ; (*)	; '%'
-	;LEA	EAX,[EBP+12]	; fd (file number)
-	;MOV	EAX,[EBX]	; STDOUT = -1 (TRDOS 386)
-	;PUSH	EAX
-	;;MOV	CL,2
-	;CALL	_OS_fputc
-	;ADD	ESP,8
-	;LEA	EBX,[EBP-16]	; ++cc;
-	;;MOV	EAX,[EBX]
-	;;INC	EAX
-	;;MOV	[EBX],EAX
-	;INC	DWORD [EBX]
-	;JMP	short _p_1	; continue;
-;_lib_81: ; (!)
-	;LEA	EDX,[EBP-32]	; if(*ctl=='-')
-	;MOV	EAX,[EDX]
-	;MOVSX	EBX,BYTE [EAX]
+	;JZ	short __p_6
+	JNZ	short __p_4	; %%
+__p_6:
 	; ebx = character (*ctl)
-	MOV	EAX,45	; '-'
+	MOV	EAX,45	; '-'	; if(*ctl=='-')
 	CALL	__eq
 	LEA	EBX,[EBP-8] ; *
 	MOV	[EBX],EAX ; *	; (eax = 0 or 1)
 	OR	EAX,EAX
-	JZ	short _p_6	; else
-;_lib_84:
-	;LEA	EBX,[EBP-8] ; *	; {left=1; ++ctl;}
-	;MOV	EAX,1
+	JZ	short __p_7	; else
+	;
 	; eax = 1
-	;MOV	[EBX],EAX ; *
-	;LEA	EDX,[EBP-32]	; ++ctl;
-	;MOV	EAX,[EDX]
-	;INC	EAX
-	;MOV	[EDX],EAX
-	INC	DWORD [EDX]
-	;JMP	short _p_7
-_p_6:
-	;LEA	EBX,[EBP-8] ; *	; else left=0;
-	;XOR	EAX,EAX
-	; eax = 0
-	;MOV	[EBX],EAX ; *
-_p_7:
+	INC	DWORD [EDX] ; *	; {left=1; ++ctl;}
+__p_7:
 	;LEA	EDX,[EBP-32]	; if(*ctl=='0') pad='0';
 	MOV	EAX,[EDX]
 	MOVSX	EBX,BYTE [EAX]
@@ -874,110 +699,92 @@ _p_7:
 	CALL	__eq
 	LEA	ECX,[EBP-12] ; *
 	OR	EAX,EAX
-	;JZ	short _lib_86	; else
-	JNZ	short _p_8	; ** (ebx = '0')
-;_lib_87:
-	;LEA	ECX,[EBP-12] ;*	; pad='0';
-	;MOV	EAX,48	; '0'
-	;MOV	[ECX],EAX
-	; ebx = '0' = 48
-	;MOV	[ECX],EBX
-	;JMP	short _p_8	; ** (ebx = '0')
-;_lib_86:			
+	JNZ	short __p_8
+	; else
 	;LEA	ECX,[EBP-12] ; *
 	MOV	EBX,32 ; space	; else pad=' ';
-_p_8: ; **
-	MOV	[ECX],EBX
-;_p_8:
-	;LEA	EDX,[EBP-32]	; if(isdigit(*ctl))
+__p_8: ; **
+	MOV	[ECX],EBX	; ebx = '0'
+	LEA	EDX,[EBP+12]	; 04/04/2026
 	MOV	EBX,[EDX]
 	MOVSX	EAX,BYTE [EBX]
 	PUSH	EAX
-	;MOV	CL,1
-	CALL	_isdigit
+	CALL	_isdigit	; if(isdigit(*ctl))
 	ADD	ESP,4
 	OR	EAX,EAX
-	JZ	short _p_10	; else
-;_lib_90:
-	LEA	EBX,[EBP-32]	; ctl++
+	JZ	short __p_10	; else
+	;
+	LEA	EBX,[EBP+12]	; ctl++
 	MOV	EAX,[EBX]
 	INC	DWORD [EBX]
 	PUSH	EAX
-	;MOV	CL,1
 	CALL	_atoi
 	ADD	ESP,4
 	LEA	EBX,[EBP-28]	; width=atoi(ctl++);
 	MOV	[EBX],EAX
-;_p_9:				; while(isdigit(*ctl))
+	;			; while(isdigit(*ctl))
 	LEA	EAX,[EBP-32]
 	MOV	EBX,[EAX]
-_p_9: ; *
+__p_9: ; *
 	MOVSX	EAX,BYTE [EBX]
 	PUSH	EAX
-	;MOV	CL,1
 	CALL	_isdigit
 	ADD	ESP,4
 	OR	EAX,EAX
-	JZ	short _p_11
-;_lib_93:			; ++ctl;
+	JZ	short __p_11
+	;			; ++ctl;
 	LEA	EAX,[EBP-32]
 	MOV	EBX,[EAX]
 	INC	EBX
 	MOV	[EAX],EBX
-	JMP	short _p_9 ;*	; while
-_p_10:
+	JMP	short __p_9 ;*	; while
+__p_10:
 	LEA	EBX,[EBP-28]	; else width=0;
 	;XOR	EAX,EAX ; 0
 	; eax = 0
 	MOV	[EBX],EAX
-_p_11:
+__p_11:
 	LEA	EDX,[EBP-32]	; if(*ctl=='.')
 	MOV	ECX,[EDX]
 	MOVSX	EBX,BYTE [ECX]
 	MOV	EAX,46	; '.'
 	CALL	__eq
 	OR	EAX,EAX
-	JZ	short _p_13	; else
-;_lib_96:
+	JZ	short __p_13	; else
+	;
 	;LEA	EDX,[EBP-32]	; ++ctl
 	;MOV	ECX,[EDX]
 	INC	ECX
 	MOV	[EDX],ECX
 	PUSH	ECX
-	;MOV	CL,1
 	CALL	_atoi
 	ADD	ESP,4
 	LEA	EBX,[EBP-24]	; maxchr=atoi(++ctl);
 	MOV	[EBX],EAX
-;_p_12:
+	;
 	LEA	EAX,[EBP-32]	; while(isdigit(*ctl))
 	MOV	EBX,[EAX]
-_p_12:	; *
+__p_12: ; *
 	MOVSX	EAX,BYTE [EBX]
 	PUSH	EAX
-	;MOV	CL,1
 	CALL	_isdigit
 	ADD	ESP,4
 	OR	EAX,EAX
-	JZ	short _p_14
-;_lib_99:
+	JZ	short __p_14
+	;
 	LEA	EAX,[EBP-32]	; ++ctl;
 	MOV	EBX,[EAX]
 	INC	EBX
 	MOV	[EAX],EBX
-	JMP	short _p_12 ;*	; while
-_p_13:
+	JMP	short __p_12 ;*	; while
+__p_13:
 	LEA	EBX,[EBP-24]	; else maxchr=0;
 	;XOR	EAX,EAX
 	; eax = 0
 	MOV	[EBX],EAX
-_p_14:				; arg=*nxtarg--;
-	LEA	EDX,[EBP+8]
-	MOV	EBX,[EDX]	; *nxtarg
-	SUB	DWORD [EDX],4
-	MOV	EAX,[EBX]
-	LEA	EBX,[EBP-4]	; arg
-	MOV	[EBX],EAX
+__p_14:				; arg = arg+4
+	LEA	EBX,[EBP-4]
+	ADD	DWORD [EBX],4
 	LEA	EDX,[EBP-36]	; sptr=str;
 	LEA	EAX,[EBP-56]
 	MOV	[EDX],EAX
@@ -985,128 +792,85 @@ _p_14:				; arg=*nxtarg--;
 	MOV	ECX,[EBX]
 	INC	DWORD [EBX]
 	MOVSX	EAX,BYTE [ECX]
-	JMP	short _p_22
-_p_15:			; case 'c':
+	JMP	short __p_21
+__p_15:			; case 'c':
 	LEA	EDX,[EBP-56]	; str[0]=arg;
 	LEA	EBX,[EBP-4]
-	MOV	EAX,[EBX]
+	MOV	ECX,[EBX]	; EBP+24 .. EBP+32
+	MOV	EAX,[ECX]	; [EBP+24]..[EBP+32]
 	MOV	[EDX],AL
 	;LEA	EDX,[EBP-56]
 	;ADD	EDX,1
 	INC	EDX
 	XOR	EAX,EAX ; 0
 	MOV	[EDX],AL	; str[1]=NULL;
-	JMP	_p_24	; break;
-_p_16:			; case 's':
+	JMP	__p_24	; break;
+__p_16:			; case 's':
 	LEA	EBX,[EBP-4]	; sptr=arg;
-	MOV	EAX,[EBX]
+	MOV	ECX,[EBX]	; EBP+24 .. EBP+32
+	MOV	EAX,[ECX]	; [EBP+24]..[EBP+32]
 	LEA	EBX,[EBP-36]
 	MOV	[EBX],EAX
-	JMP	_p_24	; break;
-_p_17:			; case 'd':
-	LEA	EBX,[EBP-4]	; itoa(arg,str);
-	MOV	EAX,[EBX]
-	PUSH	EAX
+	JMP	__p_24	; break;
+__p_17:			; case 'd':
+	; 04/04/2026
 	LEA	EAX,[EBP-56]
 	PUSH	EAX
-	;MOV	CL,2
+	LEA	EDX,[EBP-4]	; itoa(arg,str);
+	MOV	EBX,[EDX]	; EBP+24 .. EBP+32
+	MOV	EAX,[EBX]	; [EBP+24]..[EBP+32]
+	PUSH	EAX
 	CALL	_itoa
 	ADD	ESP,8
-	JMP	short _p_24	; break;
-_p_19:			; case 'o':
+	JMP	short __p_24	; break;
+__p_18:			; case 'o':
 	MOV	ECX,8 ; *
-	;LEA	EBX,[EBP-4]	; itoab(arg,str,8);
-	;MOV	EAX,[EBX]
-	;PUSH	EAX		; arg
-	;LEA	EAX,[EBP-56]
-	;PUSH	EAX		; str
-	;MOV	EAX,8
-	;;PUSH	EAX
-	;;;MOV	CL,3
-	;;CALL	_itoab
-	;;;ADD	ESP,12
-	;;JMP	short _p_24	; break;
-	;JMP	short _lib_116
-	JMP	short _p_23
-_p_20:			; case 'u':
+	JMP	short __p_23	; itoab(arg,str,8);
+__p_19:			; case 'u':
 	MOV	ECX,10 ; *
-	;LEA	EBX,[EBP-4]	; itoab(arg,str,10);
-	;MOV	EAX,[EBX]
-	;PUSH	EAX		; arg
-	;LEA	EAX,[EBP-56]
-	;PUSH	EAX		; str
-	;MOV	EAX,10
-	;;PUSH	EAX
-	;;;MOV	CL,3
-	;;CALL	_itoab
-	;;;ADD	ESP,12
-	;;JMP	short _p_24	; break;
-	;JMP	short _lib_116
-	JMP	short _p_23
-_p_21:			; case 'x':
+	JMP	short __p_23	; itoab(arg,str,10);
+__p_20:			; case 'x':
 	MOV	ECX,16 ; *
-	;LEA	EBX,[EBP-4]	; itoab(arg,str,16);
-	;MOV	EAX,[EBX]
-	;PUSH	EAX		; arg
-	;LEA	EAX,[EBP-56]
-	;PUSH	EAX		; str
-	;MOV	EAX,16
-	;;PUSH	EAX
-	;;;MOV	CL,3
-	;;CALL	_itoab
-	;;;ADD	ESP,12
-	;;JMP	short _p_24	; break;
-	;JMP	short _lib_116
-	JMP	short _p_23
+	JMP	short __p_23	; itoab(arg,str,16);
 
-;_p_2:
-	;LEA	EAX,[EBP-16]
-	;MOV	EBX,EAX
-	;MOV	EAX,[EBX]
-	;MOV	ESP,EBP
-	;POP	EBP
-	;RETN
-
-_p_22:			; switch(*ctl++)
+__p_21:			; switch(*ctl++)
 	CALL	__switch
 
- DD _p_15	; case 'c':
+ DD __p_15	; case 'c':
  DD 99
- DD _p_16	; case 's':
+ DD __p_16	; case 's':
  DD 115
- DD _p_17	; case 'd':
+ DD __p_17	; case 'd':
  DD 100
- DD _p_18	; case 'b':
+ DD __p_22	; case 'b':
  DD 98
- DD _p_19	; case 'o':
+ DD __p_18	; case 'o':
  DD 111
- DD _p_20	; case 'u':
+ DD __p_19	; case 'u':
  DD 117
- DD _p_21	; case 'x':
+ DD __p_20	; case 'x':
  DD 120
  DD 0		; default:
-	JMP	_p_2	; return (cc);
+	JMP	__p_2	; return (cc);
 
-_p_18:			; case 'b':
+__p_22:			; case 'b':
 	MOV	ECX,2 ; *
-_p_23:
+__p_23:
 	; ecx = number base (2,8,10,16)
-	LEA	EBX,[EBP-4]	; itoab(arg,str,?);
-	MOV	EAX,[EBX]
-	PUSH	EAX		; arg
+	; 04/04/2026
+	PUSH	ECX ; *
 	LEA	EAX,[EBP-56]
 	PUSH	EAX		; str
-;_lib_116:
-	;PUSH	EAX
-	PUSH	ECX ; *
-	;MOV	CL,3
-	CALL	_itoab
+	LEA	EBX,[EBP-4]
+	MOV	ECX,[EBX]	; EBP+24 .. EBP+32
+	MOV	EAX,[ECX]	; [EBP+24]..[EBP+32]
+	PUSH	EAX		; arg
+	CALL	_itoab		; itoab(arg,str,?);
 	ADD	ESP,12
-_p_24:
+__p_24:
 	LEA	EBX,[EBP-36]
 	MOV	EAX,[EBX]
 	PUSH	EAX
-	;MOV	CL,1
 	CALL	_strlen
 	ADD	ESP,4
 	LEA	ECX,[EBP-20]
@@ -1114,125 +878,118 @@ _p_24:
 	LEA	EDX,[EBP-24]	; if(maxchr && maxchr<len)
 	MOV	EBX,[EDX]
 	OR	EBX,EBX
-	;JZ	short _p_25
-	JZ	short _p_26	; *
-;_lib_115:
+	;JZ	short __p_25
+	JZ	short __p_26	; *
+	;
 	;LEA	EDX,[EBP-24]	; maxchr
 	;MOV	EBX,[EDX]
 	;LEA	ECX,[EBP-20]	; len
 	;MOV	EAX,[ECX]
 	CALL	__lt
 	OR	EAX,EAX
-	JZ	short _p_25
-;_lib_114:
-;_lib_117:
+	JZ	short __p_25
+	;
 	;LEA	ECX,[EBP-20]
 	;LEA	EDX,[EBP-24]
 	;MOV	EBX,[EDX]
 	MOV	[ECX],EBX	; len=maxchr;
-_p_25:
+__p_25:
 	;LEA	ECX,[EBP-20]	; len
 	MOV	EAX,[ECX]
-_p_26: ; *			; if(width>len)
+__p_26: ; *			; if(width>len)
 	LEA	EDX,[EBP-28]
 	MOV	EBX,[EDX]	; width
 	CALL	__gt
 	OR	EAX,EAX
-	JZ	short _p_27	; else
-;_lib_119:
+	JZ	short __p_27	; else
+	;
 	;LEA	EDX,[EBP-28]	; width=width-len;
 	;MOV	EBX,[EDX]
 	;LEA	ECX,[EBP-20]
 	MOV	EAX,[ECX]	; len
 	SUB	EBX,EAX
 	MOV	[EDX],EBX
-	JMP	short _p_28
-_p_27:
+	JMP	short __p_28
+__p_27:
 	;LEA	EDX,[EBP-28]	; else width=0;
 	;XOR	EAX,EAX
 	; eax = 0
 	MOV	[EDX],EAX
-_p_28:
+__p_28:
 	LEA	EBX,[EBP-8]	; if(!left)
 	MOV	EAX,[EBX]
 	CALL	__lneg
 	OR	EAX,EAX
-	JZ	short _p_30
-_p_29:
+	JZ	short __p_30
+__p_29:
 	;LEA	EDX,[EBP-28]	; while(width--)
 	MOV	EAX,[EDX]
 	DEC	DWORD [EDX]
 	OR	EAX,EAX
-	JZ	short _p_30
-;_lib_125:
-	LEA	EBX,[EBP-12]	; {OS_fputc(pad,fd);
+	JZ	short __p_30
+	;
+	LEA	EBX,[EBP+8]	; 04/04/2026
+	MOV	EAX,[EBX]
+	PUSH	EAX		; fd
+	LEA	EBX,[EBP-12]
 	MOV	EAX,[EBX]
 	PUSH	EAX
-	LEA	EBX,[EBP+12]	; fd
-	MOV	EAX,[EBX]
-	PUSH	EAX
-	;MOV	CL,2
-	CALL	_OS_fputc
+	CALL	_OS_fputc	; {OS_fputc(pad,fd);
 	ADD	ESP,8
 	LEA	EBX,[EBP-16]	; ++cc;}
-	;MOV	EAX,[EBX]
-	;INC	EAX
-	;MOV	[EBX],EAX
 	INC	DWORD [EBX]
 	LEA	EDX,[EBP-28]
-	JMP	short _p_29
-_p_30:
+	JMP	short __p_29
+__p_30:
 	LEA	EBX,[EBP-20]	; while(len--)
 	MOV	EAX,[EBX]
 	DEC	EAX
 	MOV	[EBX],EAX
 	INC	EAX
 	;OR	EAX,EAX
-	JZ	short _p_31
-;_lib_128:
-	LEA	EDX,[EBP-36]	; {OS_fputc(*sptr++,fd);
+	JZ	short __p_31
+	;
+	LEA	EBX,[EBP+8]
+	MOV	EAX,[EBX]
+	PUSH	EAX		; fd (file number)
+	LEA	EDX,[EBP-36]
 	MOV	EBX,[EDX]
 	INC	DWORD [EDX]
 	MOVSX	EAX,BYTE [EBX]
 	PUSH	EAX
-	LEA	EBX,[EBP+12]	; fd (file number)
-	MOV	EAX,[EBX]
-	PUSH	EAX
-	;MOV	CL,2
-	CALL	_OS_fputc
+	CALL	_OS_fputc	; {OS_fputc(*sptr++,fd);
 	ADD	ESP,8
 	LEA	EBX,[EBP-16]	; ++cc;}
 	INC	DWORD [EBX]
-	JMP	short _p_30
-_p_31:
+	JMP	short __p_30
+__p_31:
 	LEA	EBX,[EBP-8]	; if(left)
 	MOV	EAX,[EBX]
 	OR	EAX,EAX
-	;JZ	short _p_33
-	JNZ	short _p_32
-_p_33:
-	JMP	_p_1		; while(*ctl)
-_p_32:
+	;JZ	short __p_33
+	JNZ	short __p_32
+__p_33:
+	JMP	__p_1		; while(*ctl)
+__p_32:
 	LEA	EBX,[EBP-28]	; while(width--)
 	MOV	EAX,[EBX]
 	DEC	EAX
 	MOV	[EBX],EAX
 	INC	EAX
 	;OR	EAX,EAX
-	JZ	short _p_33
-;_lib_133:
-	LEA	EBX,[EBP-12]	; {OS_fputc(pad,fd);
-	MOV	EAX,[EBX]
-	PUSH	EAX		; pad
-	LEA	EBX,[EBP+12]
+	JZ	short __p_33
+	;
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]
 	PUSH	EAX		; fd
-	;MOV	CL,2
-	CALL	_OS_fputc
+	LEA	EBX,[EBP-12]
+	MOV	EAX,[EBX]
+	PUSH	EAX		; pad
+	CALL	_OS_fputc	; {OS_fputc(pad,fd);
 	ADD	ESP,8
 	LEA	EBX,[EBP-16]	; ++cc;}
 	INC	DWORD [EBX]
-	JMP	short _p_32
+	JMP	short __p_32
 
 	; /* TRDOS 386 v2 modification */
 	; 03/04/2026
@@ -1240,27 +997,17 @@ _fputs:				; fputs(string,fd)
 	PUSH	EBP
 	MOV	EBP,ESP
 _fputs_1:
-	LEA	EDX,[EBP+8]	; while(*string)
+	LEA	EDX,[EBP+12]	; while(*string)
 	MOV	EBX,[EDX]
 	MOVSX	EAX,BYTE [EBX]	; *string (char)
 	OR	EAX,EAX
 	JZ	short _fputs_2	; char = 0 (ASCIIZ string)
-;_lib_137:
-	PUSH	EAX
-	;LEA	EDX,[EBP+8]	; OS_fputc(*string++,fd);
-	;MOV	EBX,[EDX]
-	;INC	EBX
-	;MOV	[EAX],EBX
-	;DEC	EBX
 	INC	DWORD [EDX]	; *string++
-				; (points to the next char)
-	;MOVSX	EAX,BYTE [EBX]	; char (> 0)
-	;PUSH	EAX
-	LEA	EBX,[EBP+12]
-	MOV	EAX,[EBX]	; fd (-1 -> STDOUT/STDERR)
-	PUSH	EAX
-	;MOV	CL,2
-	CALL	_OS_fputc
+	LEA	EBX,[EBP+8]
+	MOV	ECX,[EBX]	; fd (-1 -> STDOUT/STDERR)
+	PUSH	ECX	; file number
+	PUSH	EAX	; char
+	CALL	_OS_fputc	; OS_fputc(*string++,fd);
 	ADD	ESP,8
 	JMP	short _fputs_1	; jump to while(*string)
 _fputs_2:
@@ -1512,18 +1259,18 @@ _itoa:				; itoa(n,s)
 	PUSH	EBP		; char *s; int n;
 	MOV	EBP,ESP
 	ADD	ESP,-8		; int sign; char *ptr;
-	LEA	EBX,[EBP+8]
+	LEA	EBX,[EBP+12]
 	MOV	EAX,[EBX]
 	LEA	EBX,[EBP-8]	; 04/04/2026
 	MOV	[EBX],EAX	; ptr=s;
-	LEA	EBX,[EBP+12]	; if((sign=n)<0) n=-n;
+	LEA	EBX,[EBP+8]	; if((sign=n)<0) n=-n;
 	MOV	EAX,[EBX]	; n
 	LEA	EDX,[EBP-4]	; sign
 	MOV	[EDX],EAX	; sign = n
 	OR	EAX,EAX
 	JNL	short _lib_150
 _lib_151:
-	;LEA	EBX,[EBP+12]	; n=-n;
+	;LEA	EBX,[EBP+8]	; n=-n;
 	;MOV	EAX,[EBX]
 	NEG	EAX
 	MOV	[EBX],EAX
@@ -1534,7 +1281,7 @@ _lib_152:			; do
 	MOV	EAX,[EBX]
 	INC	DwORD [EBX]
 	PUSH	EAX
-	LEA	EBX,[EBP+12]
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]	; n
 	MOV	ECX,10
 	CDQ
@@ -1566,7 +1313,7 @@ _lib_155:
 	;XOR	EAX,EAX
 	;MOV	[EBX],AL
 	MOV	BYTE [EBX],0
-	LEA	EBX,[EBP+8]	; reverse(s);
+	LEA	EBX,[EBP+12]	; reverse(s);
 	MOV	EAX,[EBX]
 	PUSH	EAX
 	;MOV	CL,1
@@ -1590,18 +1337,18 @@ _itoab:				; itoab(n,s,b)
 	MOV	EAX,[EBX]
 	LEA	EBX,[EBP-4]	; ptr
 	MOV	[EBX],EAX	; ptr=s;
-	LEA	EBX,[EBP+8]	; b >>= 1;
+	LEA	EBX,[EBP+16]	; b >>= 1;
 	MOV	EAX,[EBX]
 	SAR	EAX,1
 	MOV	[EBX],EAX
 _lib_163:
 _lib_158:			; do
 	LEA	EDX,[EBP-8]	; {lowbit=n&1;
-	LEA	EBX,[EBP+16]
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]	; n
 	AND	EAX,1
 	MOV	[EDX],EAX	; n&1
-	;LEA	EBX,[EBP+16]	; n=(n>>1)&32767;
+	;LEA	EBX,[EBP+8]	; n=(n>>1)&32767;
 	MOV	EAX,[EBX]
 	SAR	EAX,1
 	AND	EAX,32767
@@ -1609,9 +1356,9 @@ _lib_158:			; do
 	;LEA	EBX,[EBP-4]	; *ptr=((n%b)<<1)+lowbit;
 	;MOV	EAX,[EBX]	; *ptr
 	;PUSH	EAX
-	;LEA	EBX,[EBP+16]
+	;LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]	; n
-	LEA	EDX,[EBP+8]	; b
+	LEA	EDX,[EBP+16]	; b
 	MOV	ECX,[EDX]
 	CDQ
 	IDIV	ECX		; n/b
@@ -1650,9 +1397,9 @@ _lib_162:
 	;INC	EAX
 	;MOV	[EBX],EAX
 	INC	DWORD [EBX]
-	LEA	EBX,[EBP+16]	; }while(n/=b);
+	LEA	EBX,[EBP+8]	; }while(n/=b);
 	MOV	EAX,[EBX]	; n
-	LEA	EDX,[EBP+8]	; b
+	LEA	EDX,[EBP+16]	; b
 	MOV	ECX,[EDX]
 	CDQ
 	IDIV	ECX		; n/b
@@ -1689,13 +1436,13 @@ _itod:				; itod(nbr,str,sz)
 	PUSH	EBP	; int nbr; char str[]; int sz;
 	MOV	EBP,ESP
 	ADD	ESP,-4		; char sgn;
-	LEA	EDX,[EBP+16]	; if(nbr<0)
+	LEA	EDX,[EBP+8]	; if(nbr<0)
 	MOV	EAX,[EDX]
 	LEA	EBX,[EBP-4]	; sgn
 	OR	EAX,EAX
 	JNL	short _lib_165	; else sgn=' ';
 _lib_166:
-	;LEA	EDX,[EBP+16]	; {nbr=-nbr; sgn='-';}
+	;LEA	EDX,[EBP+8]	; {nbr=-nbr; sgn='-';}
 	;MOV	EAX,[EDX]
 	NEG	EAX
 	MOV	[EDX],EAX
@@ -1710,7 +1457,7 @@ _lib_165:
 _lib_167:
 	MOV	[EBX],AL
 ;_lib_167:
-	LEA	EBX,[EBP+8]	; if(sz>0)
+	LEA	EBX,[EBP+16]	; if(sz>0)
 	MOV	EAX,[EBX]
 	LEA	EDX,[EBP+12] ;*	; str[--sz]=NULL;
 	MOV	ECX,[EDX] ;*	; str[0] address
@@ -1719,7 +1466,7 @@ _lib_167:
 _lib_169:
 	;LEA	EDX,[EBP+12] ;*	; str[--sz]=NULL;
 	;MOV	ECX,[EDX] ;*	; str[0] address
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	DEC	EAX		; --sz
 	MOV	[EBX],EAX
@@ -1733,7 +1480,7 @@ _lib_168:			; else if(sz<0)
 	OR	EAX,EAX
 	JNL	short _lib_171	; else
 _lib_172:
-	;LEA	EBX,[EBP+8]	; sz=-sz;
+	;LEA	EBX,[EBP+16]	; sz=-sz;
 	;MOV	EAX,[EBX]
 	NEG	EAX
 	MOV	[EBX],EAX
@@ -1741,7 +1488,7 @@ _lib_172:
 _lib_174:			; else
 	LEA	EDX,[EBP+12] ;*	; while(str[sz]!=NULL)
 	MOV	ECX,[EDX] ;*
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	ADD	ECX,EAX		; addr str[0]+sz
 _lib_171:	; (eax = 0)
@@ -1749,7 +1496,7 @@ _lib_171:	; (eax = 0)
 	OR	EDX,EDX
 	JZ	short _lib_175	; = NULL
 _lib_176:	; != NULL
-	;LEA	EBX,[EBP+8]	; ++sz;
+	;LEA	EBX,[EBP+16]	; ++sz;
 	;MOV	EAX,[EBX]
 	INC	EAX
 	MOV	[EBX],EAX
@@ -1759,13 +1506,13 @@ _lib_173:
 _lib_170:
 _lib_180:
 _lib_177:			; while(sz)
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	; eax = sz
 	OR	EAX,EAX
 	JZ	short _lib_178
 _lib_179:			; {str[--sz]=(nbr%10+'0');
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	; eax = sz 
 	DEC	EAX		; --sz
@@ -1774,7 +1521,7 @@ _lib_179:			; {str[--sz]=(nbr%10+'0');
 	MOV	EBX,[EDX]
 	ADD	EBX,EAX		; str[sz]
 
-	LEA	EDX,[EBP+16]	; nbr address
+	LEA	EDX,[EBP+8]	; nbr address
 	MOV	EAX,[EDX]	; nbr
 	PUSH	EDX ; *
 	MOV	ECX,10
@@ -1784,7 +1531,7 @@ _lib_179:			; {str[--sz]=(nbr%10+'0');
 	;ADD	EDX,48	; '0'
 	ADD	DL,48
 	MOV	[EBX],DL	; = (nbr%10+'0');
-	;LEA	EDX,[EBP+16]
+	;LEA	EDX,[EBP+8]
 	;MOV	EAX,[EDX]
 	POP	EBX ; *
 	;;MOV	ECX,10
@@ -1797,7 +1544,7 @@ _lib_179:			; {str[--sz]=(nbr%10+'0');
 	JNZ	short _lib_180	; while
 _lib_181:			; break;
 _lib_178:
-	LEA	EBX,[EBP+8]	; if(sz) str[--sz]=sgn;
+	LEA	EBX,[EBP+16]	; if(sz) str[--sz]=sgn;
 	MOV	EAX,[EBX]
 	LEA	EDX,[EBP+12] ;*
 	OR	EAX,EAX
@@ -1812,7 +1559,7 @@ _lib_185:
 _lib_183:
 	;LEA	EDX,[EBP+12] ;*	; str address
 	MOV	ECX,[EDX]	; str[0]
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]	; sz
 	DEC	EAX		; --sz
 	MOV	[EBX],EAX
@@ -1822,7 +1569,7 @@ _lib_183:
 	MOV	AL,[EBX]
 	MOV	[ECX],AL	; str[--sz]=sgn;
 ;_lib_184:
-	LEA	EBX,[EBP+8]	; while(sz>0)
+	LEA	EBX,[EBP+16]	; while(sz>0)
 	MOV	EAX,[EBX]
 _lib_184:
 _lib_182:
@@ -1831,7 +1578,7 @@ _lib_182:
 _lib_186:			; str[--sz]=' ';
 	;LEA	EDX,[EBP+12] ;*
 	MOV	ECX,[EDX]
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	DEC	EAX		; --sz
 	MOV	[EBX],EAX	; sz
@@ -1853,7 +1600,7 @@ _itoo:				; itoo(nbr,str,sz)
 	PUSH	EBP	; int nbr; char str[]; int sz;
 	MOV	EBP,ESP
 	ADD	ESP,-4		; int digit;
-	LEA	EBX,[EBP+8]	; if(sz>0)
+	LEA	EBX,[EBP+16]	; if(sz>0)
 	MOV	EAX,[EBX]
 	LEA	EDX,[EBP+12] ;*
 	MOV	ECX,[EDX] ;*
@@ -1862,7 +1609,7 @@ _itoo:				; itoo(nbr,str,sz)
 	JE	short _lib_191	; JNL (eax=0)
 _lib_188:
 _lib_192:	; JL
-	;LEA	EBX,[EBP+8]	; else if(sz<0)
+	;LEA	EBX,[EBP+16]	; else if(sz<0)
 	;MOV	EAX,[EBX]	; sz=-sz;
 	NEG	EAX
 	MOV	[EBX],EAX
@@ -1870,7 +1617,7 @@ _lib_192:	; JL
 _lib_189:
 	;LEA	EDX,[EBP+12] ;*	; str[--sz]=0;
 	;MOV	ECX,[EDX] ;*
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	DEC	EAX
 	MOV	[EBX],EAX
@@ -1883,7 +1630,7 @@ _lib_189:
 _lib_194:			; while(str[sz]!=0)
 	;LEA	EDX,[EBP+12] ;*
 	MOV	ECX,[EDX] ;*
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	; eax = sz
 	; ecx = str[0]
@@ -1893,7 +1640,7 @@ _lib_191: ; (eax = 0)
 	OR	EAX,EAX
 	JZ	short _lib_195
 _lib_196:
-	;LEA	EBX,[EBP+8]	; ++sz;
+	;LEA	EBX,[EBP+16]	; ++sz;
 	MOV	EAX,[EBX]
 	INC	EAX
 	MOV	[EBX],EAX
@@ -1903,7 +1650,7 @@ _lib_195:
 ;_lib_190:
 _lib_200:
 _lib_197:			; while(sz)
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	MOV	EAX,[EBX]
 _lib_190:
 	OR	EAX,EAX
@@ -1911,11 +1658,11 @@ _lib_190:
 _lib_193:
 _lib_199:
 	LEA	ECX,[EBP-4]	; {digit=nbr&7;
-	LEA	EBX,[EBP+16]
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]
 	AND	EAX,7
 	MOV	[ECX],EAX
-	;LEA	EBX,[EBP+16]
+	;LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]	; nbr=(nbr>>3)&8191;
 	;MOV	CL,3
 	;SAR	EAX,CL
@@ -1924,7 +1671,7 @@ _lib_199:
 	MOV	[EBX],EAX
 	;LEA	EDX,[EBP+12]	; str[--sz]=digit+48;
 	MOV	ECX,[EDX]	; str[0]
-	LEA	EBX,[EBP+8]
+	LEA	EBX,[EBP+16]
 	MOV	EAX,[EBX]	; sz
 	DEC	EAX		; --sz
 	MOV	[EBX],EAX
@@ -1934,14 +1681,14 @@ _lib_199:
 	;ADD	EAX,48	; '0'
 	ADD	AL,48		; digit+48
 	MOV	[ECX],AL
-	LEA	ECX,[EBP+16]	; if(nbr==0)
+	LEA	ECX,[EBP+8]	; if(nbr==0)
 	MOV	EAX,[ECX]
 	OR	EAX,EAX
 	JNZ	short _lib_200	; while
 _lib_201:
 ;_lib_198:
 ;_lib_202:			; break;
-	;LEA	EBX,[EBP+8]	; while(sz>0)
+	;LEA	EBX,[EBP+16]	; while(sz>0)
 	MOV	EAX,[EBX]
 _lib_202:
 	OR	EAX,EAX
@@ -1957,7 +1704,7 @@ _lib_203:
 _lib_204:			; str[--sz]=' ';
 	LEA	EDX,[EBP+12]	; str address
 	MOV	ECX,[EDX]	; str[0]
-	LEA	EBX,[EBP+8]	; sz address
+	LEA	EBX,[EBP+16]	; sz address
 	MOV	EAX,[EBX]
 	DEC	EAX		; --sz
 	MOV	[EBX],EAX	; sz
@@ -1979,7 +1726,7 @@ _itou:				; itou(nbr,str,sz)
 	PUSH	EBP	; int nbr; char str[]; int sz;
 	MOV	EBP,ESP
 	ADD	ESP,-4		; int lowbit;
-	LEA	EBX,[EBP+8]
+	LEA	EBX,[EBP+16]
 	MOV	EAX,[EBX]	; if(sz>0)
 	LEA	EDX,[EBP+12] ;*
 	MOV	ECX,[EDX] ;*	; str[0] address
@@ -1990,12 +1737,12 @@ _itou:				; itou(nbr,str,sz)
 	JG	short _lib_207
 	JZ	short _lib_209	; JNL (eax=0)
 ;_lib_206:
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	;OR	EAX,EAX
 	;JNL	short _lib_209	; else
 _lib_210:	; JL
-	;LEA	EBX,[EBP+8]	; sz=-sz;
+	;LEA	EBX,[EBP+16]	; sz=-sz;
 	;MOV	EAX,[EBX]
 	NEG	EAX
 	MOV	[EBX],EAX
@@ -2003,7 +1750,7 @@ _lib_210:	; JL
 _lib_207:
 	;LEA	EDX,[EBP+12] ;*	; str[--sz]=NULL;
 	;MOV	ECX,[EDX] ;*
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	DEC	EAX
 	MOV	[EBX],EAX
@@ -2016,7 +1763,7 @@ _lib_207:
 _lib_212:			; while(str[sz]!=NULL)
 	;LEA	EDX,[EBP+12] ;*
 	MOV	ECX,[EDX] ;*	; str[0] address
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	; eax = sz
 	; ecx = str[0]
@@ -2026,7 +1773,7 @@ _lib_209: ; (eax = 0)
 	OR	EAX,EAX
 	JZ	short _lib_213
 _lib_214:
-	;LEA	EBX,[EBP+8]	; ++sz;
+	;LEA	EBX,[EBP+16]	; ++sz;
 	MOV	EAX,[EBX]
 	INC	EAX
 	MOV	[EBX],EAX
@@ -2036,7 +1783,7 @@ _lib_213:
 ;_lib_208:
 _lib_215:
 _lib_218:			; while(sz)
-	;LEA	EBX,[EBP+8] ; *
+	;LEA	EBX,[EBP+16] ; *
 	MOV	EAX,[EBX]
 _lib_208:
 	OR	EAX,EAX
@@ -2044,11 +1791,11 @@ _lib_208:
 _lib_211:
 _lib_217:			; {lowbit=nbr&1;
 	LEA	EDX,[EBP-4]	; lowbit
-	LEA	ECX,[EBP+16]
+	LEA	ECX,[EBP+8]
 	MOV	EAX,[ECX]	; nbr
 	AND	EAX,1
 	MOV	[EDX],EAX
-	;LEA	ECX,[EBP+16]	; nbr=(nbr>>1)&32767;
+	;LEA	ECX,[EBP+8]	; nbr=(nbr>>1)&32767;
 	MOV	EAX,[ECX]
 	SAR	EAX,1
 	AND	EAX,32767
@@ -2056,13 +1803,13 @@ _lib_217:			; {lowbit=nbr&1;
 		; str[--sz]=((nbr%5)<<1)+lowbit+'0';
 	LEA	EDX,[EBP+12]	; str
 	MOV	ECX,[EDX]	; str[0]
-	LEA	EBX,[EBP+8]	; sz address
+	LEA	EBX,[EBP+16]	; sz address
 	MOV	EAX,[EBX]	; sz value
 	DEC	EAX		; --sz
 	MOV	[EBX],EAX	; sz = sz-1
 	ADD	ECX,EAX		; str[sz] address
 	PUSH	ECX ; ***
-	LEA	EBX,[EBP+16]
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]	; ((nbr%5)<<1)
 	MOV	ECX,5
 	CDQ
@@ -2078,13 +1825,13 @@ _lib_217:			; {lowbit=nbr&1;
 	MOV	[ECX],AL	; str[sz] =
 		; if((nbr=nbr/5)==0) break;
 	MOV	EAX,[EBX] ; **	; nbr
-	LEA	EBX,[EBP+8] ; *
+	LEA	EBX,[EBP+16] ; *
 	OR	EAX,EAX
 	JNZ	short _lib_218	; nbr <> 0
 _lib_219:			; nbr = 0
 ;_lib_216:
 _lib_220:
-	;LEA	EBX,[EBP+8]	; while(sz)
+	;LEA	EBX,[EBP+16]	; while(sz)
 	MOV	EAX,[EBX]
 	OR	EAX,EAX
 	;JE	short _lib_221
@@ -2099,7 +1846,7 @@ _lib_216:			; return str;
 _lib_222:			; str[--sz]=' ';
 	LEA	EDX,[EBP+12]
 	MOV	ECX,[EDX]	; str[0]
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	DEC	EAX
 	MOV	[EBX],EAX	; sz = sz-1
@@ -2123,7 +1870,7 @@ _itox:				; itox(nbr,str,sz)
 	PUSH	EBP	; int nbr; char str[]; int sz;
 	MOV	EBP,ESP
 	ADD	ESP,-8		; int digit,offset;
-	LEA	EBX,[EBP+8]	; if(sz>0) str[--sz]=0;
+	LEA	EBX,[EBP+16]	; if(sz>0) str[--sz]=0;
 	MOV	EAX,[EBX]
 	OR	EAX,EAX
 	;JG	short _lib_225
@@ -2134,7 +1881,7 @@ _itox:				; itox(nbr,str,sz)
 _lib_225:
 	LEA	EDX,[EBP+12]	; str[--sz]=0;
 	MOV	ECX,[EDX]
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	DEC	EAX
 	MOV	[EBX],EAX
@@ -2144,7 +1891,7 @@ _lib_225:
 	MOV	BYTE [ECX],0
 	JMP	short _lib_226
 ;_lib_224:
-	;;LEA	EBX,[EBP+8]
+	;;LEA	EBX,[EBP+16]
 	;;MOV	EAX,[EBX]
 	;OR	EAX,EAX
 	;JL	short _lib_228
@@ -2153,20 +1900,20 @@ _lib_227:			; else
 _lib_230:			; while(str[sz]!=0)
 	LEA	EDX,[EBP+12]
 	MOV	ECX,[EDX]	; str[0]
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	ADD	ECX,EAX
 	MOVSX	EDX,BYTE [ECX]	; str[sz]
 	OR	EDX,EDX
 	JE	short _lib_231
 _lib_232:
-	;LEA	EBX,[EBP+8]	; ++sz;
+	;LEA	EBX,[EBP+16]	; ++sz;
 	;MOV	EAX,[EBX]
 	INC	EAX
 	MOV	[EBX],EAX
 	JMP	short _lib_230
 _lib_228:
-	;LEA	EAX,[EBP+8]	; sz=-sz;
+	;LEA	EAX,[EBP+16]	; sz=-sz;
 	;MOV	EAX,[EBX]
 	NEG	EAX
 	MOV	[EBX],EAX
@@ -2177,17 +1924,17 @@ _lib_229:
 _lib_226:
 _lib_233:
 _lib_239:			; while(sz)
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	OR	EAX,EAX
 	JE	short _lib_234
 _lib_235:
-	LEA	EDX,[EBP+16]	; {digit=nbr&15;
+	LEA	EDX,[EBP+8]	; {digit=nbr&15;
 	MOV	EAX,[EDX]
 	AND	EAX,15
 	LEA	EBX,[EBP-4]	; digit
 	MOV	[EBX],EAX
-	;LEA	EDX,[EBP+16]	; nbr=nbr/16;
+	;LEA	EDX,[EBP+8]	; nbr=nbr/16;
 	MOV	EAX,[EDX]
 	MOV	ECX,16
 	CDQ
@@ -2216,8 +1963,8 @@ _lib_238:
 ;_lib_238:		; str[--sz]=digit+offset;
 	PUSH	EBX ; *
 	LEA	EDX,[EBP+12]	; str
-	MOV	ECX,[EDX]	; [str[0]
-	LEA	EBX,[EBP+8]
+	MOV	ECX,[EDX]	; str[0]
+	LEA	EBX,[EBP+16]
 	MOV	EAX,[EBX]
 	DEC	EAX		; --sz
 	MOV	[EBX],EAX
@@ -2228,14 +1975,14 @@ _lib_238:
 	POP	EBX ; *
 	ADD	EAX,[EBX]	; + offset
 	MOV	[ECX],AL
-	LEA	EBX,[EBP+16]
+	LEA	EBX,[EBP+8]
 	MOV	EAX,[EBX]
 	OR	EAX,EAX
 	JNE	short _lib_239
 _lib_240:
 _lib_234:
 ;_lib_241:
-	LEA	EBX,[EBP+8]	; while(sz)
+	LEA	EBX,[EBP+16]	; while(sz)
 	MOV	EAX,[EBX]
 _lib_241:
 	OR	EAX,EAX
@@ -2250,7 +1997,7 @@ _lib_242:
 _lib_243:
 	;LEA	EDX,[EBP+12]	; str[--sz]=' ';
 	MOV	ECX,[EDX]
-	;LEA	EBX,[EBP+8]
+	;LEA	EBX,[EBP+16]
 	;MOV	EAX,[EBX]
 	DEC	EAX
 	MOV	[EBX],EAX

@@ -18,22 +18,25 @@ section '.text' code readable writeable executable
 	include	"INTRINS.ASM"
 
   	; C Library ("stdio.asm")
-	include	"LIBSTD.ASM"
+	include	"LIBSTD2.ASM"
 
 	; Operating System Calls
-	include	"OSFUNCW.ASM"
+	include	"OSFUNCW2.ASM"
 
 _fopen	equ _OS_fopen
 _fputc	equ _OS_fputc
 _fgetc	equ _OS_fgetc
 _fclose equ _OS_fclos
+_putchar equ _OS_putc
+_getc	equ _OS_fgetc	; !
+_putc	equ _OS_fputc	; !
 
   ; Main program (compiled from C)
-	include "GETARGW.ASM"
-	include	"READFILE.ASM"
+	;include "GETARGW.ASM"
+	include	"HELLO2.ASM"
 
 START:
-	call	get_commandline
+	;call	get_commandline
 
 	push	STD_INPUT_HANDLE
 	call	[GetStdHandle]
@@ -56,7 +59,7 @@ _exit:
 	jmp	short _exit	; hang
 
 ; ===========================================================
-;section '.data' data readable writeable
+section '.data' data readable writeable
 ; ===========================================================
 
 ; OSFUNC.ASM
@@ -71,7 +74,7 @@ lpdword: dd 1
 character: db '@'
 
 ; ===========================================================
-;section '.bss' data readable writeable
+section '.bss' data readable writeable
 ; ===========================================================
 
 align 4

@@ -1,7 +1,8 @@
 ; -----------------------------------------------------------
 ; FASM (& SCC) TEST -ASM- FILE (for Win32 and TRDOS 386)
 ; -----------------------------------------------------------
-; 23/03/2024
+; 23/03/2026
+; Last Update: 07/04/2026
 
 _main:
 	PUSH	EBP
@@ -174,8 +175,11 @@ _read_loop:
 	PUSH	EAX
 	CALL	_OS_fgetc ; _fgetc
 	ADD	ESP,4
-	OR	EAX,EAX
+	;OR	EAX,EAX
+	; 05/04/2026
+	INC	EAX	; -1 -> 0 (EOF = -1)
 	JZ	short _readf_rtn
+	DEC	EAX
 	PUSH	EAX	; character (in AL)
 	;CALL	_OS_putc ; _putc
 	;ADD	ESP,4

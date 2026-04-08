@@ -1,10 +1,15 @@
-; Windows (32bit) Console Version - 12/03/2026
+; Windows (32bit) Console Version - 12/03/2026 
 ; -----------------------------------------------------------
-; Small C Compiler for TRDOS 386 (v2.0.9 and later)
-; Erdogan Tan - 2024
-; Beginning: 05/09/2024
-; Last Update: 07/04/2026
+; Small C Compiler (Roy Cain) for TRDOS 386 (v2.0.9 & later)
+; Erdogan Tan - 2026 !!! Modified for FASM syntax !!!
+; Beginning: 27/03/2026
+; Last Update: 05/04/2026
 ; -----------------------------------------------------------
+; Derived from 'smc386c.c' file 
+;	of adamsch1's 'scc' repository in GitHub
+;
+; https://github.com/adamsch1/scc (smc386c.c)
+;
 
 	format PE console
 	use32
@@ -14,26 +19,27 @@
 section '.text' code readable writeable executable
 ; ===========================================================
 
-	; Compiler tools
-	include	"INTRINS.ASM"
-
-  	; C Library ("stdio.asm")
-	include	"LIBSTD.ASM"
-
-	; Operating System Calls
-	include	"OSFUNCW.ASM"
-
 _fopen	equ _OS_fopen
 _fputc	equ _OS_fputc
 _fgetc	equ _OS_fgetc
 _fclose equ _OS_fclos
+_putchar equ _OS_putc
+_getc	equ _OS_fgetc	; !
+_putc	equ _OS_fputc	; !
 
-  ; Main program (compiled from C)
-	include "GETARGW.ASM"
-	include	"READFILE.ASM"
+	; Compiler tools
+	include "INTRINS.ASM"
+  	; C Library ("stdio.asm")
+	include "LIBSTD2W.ASM"
+	; Operating System Calls
+	include "OSFUNCW2.ASM"
+	;include "GETARGW.ASM"
+
+  	; Main program (compiled from C)
+	include "SMALLC1.ASM"
 
 START:
-	call	get_commandline
+	;call	get_commandline
 
 	push	STD_INPUT_HANDLE
 	call	[GetStdHandle]
@@ -55,10 +61,6 @@ _exit:
 	call	[ExitProcess]
 	jmp	short _exit	; hang
 
-; ===========================================================
-;section '.data' data readable writeable
-; ===========================================================
-
 ; OSFUNC.ASM
 
 malloc_err_msg:
@@ -69,6 +71,18 @@ malloc_err_msg:
 
 lpdword: dd 1
 character: db '@'
+
+; ===========================================================
+;section '.data' data readable writeable
+; ===========================================================
+
+; SCC.ASM
+
+  db 0
+  db "Small C Compiler v1.0 for TRDOS 386 (Windows Version)"
+  db 0
+  db "Erdogan Tan - 2026"
+  db 0
 
 ; ===========================================================
 ;section '.bss' data readable writeable

@@ -2,7 +2,7 @@
 * Small C Compiler for TRDOS 386 (v2.0.9 and later)
 * Erdogan Tan - 2024
 * Beginning: 05/09/2024
-* Last Update: 21/03/2026
+* Last Update: 07/04/2026
 * -----------------------------------------------------------
 * Derived from 'libstd.c' file of KolibriOS SCC source code
 * 2024
@@ -26,8 +26,17 @@
 ** (Modified for TRDOS 386 v2.)
 */
 puts(string) char *string;
-{while(*string)
+{
+  char *c;
+  c=NULL;
+  while(*string) {
+   /* 04/04/2026 (CRLF) */
+   if(c!='\r') {
+      c=*string;
+      if(c=='\n') OS_putc('\r');
+      }
    OS_putc(*string++);
+   }
  // OS_putc('\n');
 }
 
@@ -163,6 +172,12 @@ _gets(str,size,fd,nl) char *str; unsigned size,fd,nl;
     if(next==str) return (NULL);
     return (str);
 
+   /* 04/04/2026 (CRLF) */
+   case '\r':
+    if (nl==NULL) nl=-1; // CRLF check (only) for STDIN
+    ++next;
+    continue;
+	
    case '\n':
     *(next+nl)=NULL;
     return (str);
@@ -172,7 +187,7 @@ _gets(str,size,fd,nl) char *str; unsigned size,fd,nl;
     else         backup=0;
     goto backout;
 
-   case WIPE: // \r
+   case WIPE:
     backup=next-str;
 backout: 
     /* if(0/*iscons(fd)*//*) */ /* TRDOS 386 Modification */
@@ -234,13 +249,19 @@ printf(argc) int argc;
 */
 _print(fd,nxtarg) int fd,*nxtarg; 
 {int arg,left,pad,cc,len,maxchr,width;
- char *ctl,*sptr,str[17];
-
- cc=0;
+ char *ctl,*sptr,str[17],*c;
+ /* 07/04/2026 - TRDOS 386 Modification */
+ cc=c=0;
  ctl=*nxtarg--;
  while(*ctl)
- {if(*ctl!='%') {OS_fputc(*ctl++,fd); ++cc; continue;}
-  else ++ctl;
+ {if(*ctl!='%') {
+	if(c!='\r') {
+	   c=*ctl;
+	   if(c=='\n') OS_fputc('\r',fd);
+	}
+	OS_fputc(*ctl++,fd); ++cc; continue;
+       }
+    else ++ctl;
   if(*ctl=='%') {OS_fputc(*ctl++,fd); ++cc; continue;}
   if(*ctl=='-') {left=1; ++ctl;} else left=0;
   if(*ctl=='0') pad='0';
