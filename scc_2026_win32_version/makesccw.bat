@@ -1,1 +1,0 @@
-fasm sccw.asm SCC.EXE
